@@ -321,9 +321,9 @@ export default function Stock() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Stock</h1>
         <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => window.open('/api/exports/stock', '_blank')} className="w-full sm:w-auto">
+          {isAdmin && <Button variant="outline" onClick={() => window.open('/api/exports/stock', '_blank')} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" /> Exporter
-          </Button>
+          </Button>}
           <Dialog open={isAddOpen} onOpenChange={(open) => {
             setIsAddOpen(open);
             if (!open) form.reset({ product: "", brand: "", status: "en_stock", entryDate: format(new Date(), "yyyy-MM-dd"), quantity: 1 });

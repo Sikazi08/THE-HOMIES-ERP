@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { useListMovements, getListMovementsQueryKey } from "@workspace/api-client-react";
 import { formatFCFA, formatDateFr } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -8,12 +9,9 @@ import { Loader2, Download, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function Mouvements() {
+  const { isAdmin } = useAuth();
   const [search, setSearch] = useState("");
   const { data: movements = [], isLoading } = useListMovements({ search: search || undefined }, { query: { queryKey: getListMovementsQueryKey({ search: search || undefined }) } });
-
-  const handleExport = () => {
-    window.open('/api/exports/movements', '_blank');
-  };
 
   const getMovementTypeBadge = (type: string) => {
     switch (type) {
@@ -32,10 +30,12 @@ export default function Mouvements() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Journal des Mouvements</h1>
-        <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto">
-          <Download className="mr-2 h-4 w-4" />
-          Exporter
-        </Button>
+        {isAdmin && (
+          <Button variant="outline" onClick={() => window.open('/api/exports/movements', '_blank')} className="w-full sm:w-auto">
+            <Download className="mr-2 h-4 w-4" />
+            Exporter
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-4 items-center bg-card p-4 rounded-lg border border-border">
