@@ -51,7 +51,7 @@ export default function Login() {
       <Card className="w-full max-w-md border-border bg-card shadow-2xl">
         <CardHeader className="space-y-4 pb-6 flex flex-col items-center">
           <img src={logoImg} alt="The Homies" className="h-44 w-auto object-contain" />
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-sm" style={{ marginTop: '-1.5cm' }}>
             Connectez-vous pour accéder à votre espace
           </p>
         </CardHeader>
