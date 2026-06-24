@@ -49,13 +49,13 @@ export default function Login() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md border-border bg-card shadow-2xl">
-        <CardHeader className="space-y-4 pb-6 flex flex-col items-center">
+        <CardHeader className="p-6 space-y-4 flex flex-col items-center pt-[20px] pb-[20px]">
           <img src={logoImg} alt="The Homies" className="h-44 w-auto object-contain" />
-          <p className="text-muted-foreground text-sm" style={{ marginTop: '-1.5cm' }}>
+          <p className="text-muted-foreground text-sm mt-[2px] mb-[2px]" style={{ marginTop: '-1.5cm' }}>
             Connectez-vous pour accéder à votre espace
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6 pt-0 pr-[24px] pb-[55px]">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="username">Nom d'utilisateur</Label>
