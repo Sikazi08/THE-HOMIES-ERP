@@ -67,6 +67,22 @@ export default function Ventes() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
+  const [trocAttachments, setTrocAttachments] = useState<any[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+
+  useEffect(() => {
+    const s = selectedSale as any;
+    if (s && s.saleType === "troc" && s.trocProductId) {
+      setLoadingAttachments(true);
+      fetch(`/api/attachments/products/${s.trocProductId}`, { credentials: "include" })
+        .then(r => (r.ok ? r.json() : []))
+        .then((rows) => setTrocAttachments(Array.isArray(rows) ? rows : []))
+        .catch(() => setTrocAttachments([]))
+        .finally(() => setLoadingAttachments(false));
+    } else {
+      setTrocAttachments([]);
+    }
+  }, [selectedSale]);
 
   // Client autocomplete
   const nameAutocomplete = useClientAutocomplete();
@@ -646,6 +662,44 @@ export default function Ventes() {
                       {s.trocImei && <p className="text-xs font-mono text-muted-foreground">IMEI: {s.trocImei}</p>}
                       {s.trocCapacity && <p className="text-xs text-muted-foreground">{s.trocCapacity}{s.trocColor ? ` · ${s.trocColor}` : ""}</p>}
                     </div>
+                  </div>
+                )}
+
+                {s.saleType === "troc" && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Pièces jointes</h4>
+                    {loadingAttachments ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Chargement...</div>
+                    ) : trocAttachments.length === 0 ? (
+                      <p className="text-xs text-muted-foreground bg-muted/30 border border-border rounded-lg p-3">Aucune pièce jointe pour ce troc.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {trocAttachments.map((a: any) => {
+                          const typeLabel: Record<string, string> = { facture: "Facture", declaration: "Déclaration sur l'honneur", cni: "CNI" };
+                          return (
+                            <div key={a.id} className="flex items-center justify-between gap-2 bg-muted/30 rounded-lg p-3 border border-border">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileText className="h-4 w-4 text-primary shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium">{typeLabel[a.type] || a.type}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{a.filename}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                <Button variant="outline" size="sm" title="Visualiser"
+                                  onClick={() => window.open(`/api/attachments/${a.id}/download?inline=1`, "_blank")}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="sm" title="Télécharger"
+                                  onClick={() => window.open(`/api/attachments/${a.id}/download`, "_blank")}>
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 

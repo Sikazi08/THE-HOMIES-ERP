@@ -54,8 +54,9 @@ router.get("/:id/download", requireAuth, async (req, res): Promise<void> => {
   if (!row) { res.status(404).json({ error: "Pièce jointe non trouvée" }); return; }
 
   const buffer = Buffer.from(row.file_data as string, "base64");
+  const disposition = req.query.inline ? "inline" : "attachment";
   res.setHeader("Content-Type", row.mime_type || "application/octet-stream");
-  res.setHeader("Content-Disposition", `attachment; filename="${row.filename}"`);
+  res.setHeader("Content-Disposition", `${disposition}; filename="${row.filename}"`);
   res.send(buffer);
 });
 
