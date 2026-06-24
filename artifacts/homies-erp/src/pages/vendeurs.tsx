@@ -184,7 +184,7 @@ export default function Vendeurs() {
         </Dialog>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent bg-muted/50">

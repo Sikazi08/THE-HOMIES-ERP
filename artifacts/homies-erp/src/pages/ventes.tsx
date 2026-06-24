@@ -302,7 +302,7 @@ export default function Ventes() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField control={form.control} name="saleType" render={({ field }) => (
                       <FormItem><FormLabel>Type de vente</FormLabel>
                         <Select onValueChange={(v) => { field.onChange(v); if (v !== "troc") { setTrocHasInvoice(false); setInvoiceFile(null); } }} value={field.value}>
@@ -326,7 +326,7 @@ export default function Ventes() {
                     )} />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField control={form.control} name="amount"
                       rules={{ required: "Le montant est obligatoire", min: { value: 1, message: "Supérieur à 0" } }}
                       render={({ field }) => (
@@ -367,7 +367,7 @@ export default function Ventes() {
                   )}
 
                   {/* Client autocomplete */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="relative">
                       <FormField control={form.control} name="clientName" render={({ field }) => (
                         <FormItem><FormLabel>Nom du client (Optionnel)</FormLabel>
@@ -437,7 +437,7 @@ export default function Ventes() {
                           <span className="text-xs block text-green-500/70 mt-0.5">PV ({formatFCFA(selectedProductData?.sellingPrice)}) − Somme reçue ({formatFCFA(watchAmount)})</span>
                         </div>
                       )}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField control={form.control} name="trocProduct"
                           rules={{ required: watchSaleType === "troc" ? "Obligatoire" : false }}
                           render={({ field }) => (
@@ -541,7 +541,7 @@ export default function Ventes() {
       </div>
 
       {/* Sales table */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent bg-muted/50">

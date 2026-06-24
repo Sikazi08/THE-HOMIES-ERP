@@ -92,7 +92,7 @@ export default function Clients() {
         <span className="text-sm text-muted-foreground whitespace-nowrap">{clients.length} client{clients.length !== 1 ? "s" : ""}</span>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent bg-muted/50">
@@ -147,7 +147,7 @@ export default function Clients() {
               <div className="bg-muted/30 p-4 rounded-lg border border-border">
                 <h3 className="text-2xl font-black text-foreground">{clientDetail.fullName}</h3>
                 <p className="text-muted-foreground">{clientDetail.phone || "Pas de numéro"}</p>
-                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
                   <div>
                     <span className="text-xs text-muted-foreground uppercase tracking-wider block">Total dépensé</span>
                     <span className="text-xl font-bold text-primary">{formatFCFA(clientDetail.totalPurchases)}</span>

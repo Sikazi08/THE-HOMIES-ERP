@@ -129,7 +129,7 @@ type ProductFormData = ProductInput & { productType?: string; quantity?: number;
 function PhoneFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductFormData>>; isAdmin: boolean }) {
   return (
     <>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField control={f.control} name="product" rules={{ required: "Le nom est obligatoire" }} render={({ field }) => (
           <FormItem><FormLabel>Nom du produit *</FormLabel><FormControl><Input {...field} placeholder="Ex: iPhone 14 Pro" /></FormControl><FormMessage /></FormItem>
         )} />
@@ -141,7 +141,7 @@ function PhoneFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductF
             </Select><FormMessage /></FormItem>
         )} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField control={f.control} name="imei" render={({ field }) => (
           <FormItem><FormLabel>IMEI</FormLabel><FormControl><Input {...field} placeholder="15 chiffres" /></FormControl><FormMessage /></FormItem>
         )} />
@@ -149,7 +149,7 @@ function PhoneFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductF
           <FormItem><FormLabel>Fournisseur</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
         )} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField control={f.control} name="capacity" render={({ field }) => (
           <FormItem><FormLabel>Capacité</FormLabel>
             <Select onValueChange={field.onChange} value={field.value ?? ""}>
@@ -165,7 +165,7 @@ function PhoneFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductF
             </Select><FormMessage /></FormItem>
         )} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField control={f.control} name={"entryMethod" as keyof ProductFormData} render={({ field }) => (
           <FormItem><FormLabel>Méthode d'entrée</FormLabel>
             <Select onValueChange={field.onChange} value={(field.value as string) ?? "achat"}>
@@ -189,7 +189,7 @@ function PhoneFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductF
 function AccessoireFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductFormData>>; isAdmin: boolean }) {
   return (
     <>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField control={f.control} name="product" rules={{ required: "Le nom est obligatoire" }} render={({ field }) => (
           <FormItem><FormLabel>Nom du produit *</FormLabel><FormControl><Input {...field} placeholder="Ex: Chargeur USB-C 65W" /></FormControl><FormMessage /></FormItem>
         )} />
@@ -197,7 +197,7 @@ function AccessoireFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<Pro
           <FormItem><FormLabel>Marque (Optionnel)</FormLabel><FormControl><Input {...field} placeholder="Ex: Anker" /></FormControl><FormMessage /></FormItem>
         )} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField control={f.control} name={"quantity" as keyof ProductFormData} rules={{ required: "La quantité est obligatoire", min: { value: 1, message: "Minimum 1" } }} render={({ field }) => (
           <FormItem><FormLabel>Quantité *</FormLabel>
             <FormControl><Input type="number" min={1} {...field} value={field.value as number ?? 1} onChange={e => field.onChange(Number(e.target.value))} /></FormControl>
@@ -213,7 +213,7 @@ function AccessoireFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<Pro
 
 function CommonPriceFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductFormData>>; isAdmin: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {isAdmin && (
         <FormField control={f.control} name="purchasePrice" render={({ field }) => (
           <FormItem><FormLabel>Prix d'achat</FormLabel>
@@ -232,7 +232,7 @@ function CommonPriceFields({ f, isAdmin }: { f: ReturnType<typeof useForm<Produc
 
 function CommonStatusDateFields({ f, forAdd }: { f: ReturnType<typeof useForm<ProductFormData>>; forAdd?: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <FormField control={f.control} name="status" render={({ field }) => (
         <FormItem><FormLabel>Statut</FormLabel>
           <Select onValueChange={field.onChange} value={field.value}>
@@ -626,7 +626,7 @@ export default function Stock() {
                   </div>
                   {getStatusBadge(selectedProduct.status)}
                 </div>
-                <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg border border-border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg border border-border">
                   {isPhone ? (
                     <>
                       <div><Label className="text-xs text-muted-foreground">IMEI</Label><p className="font-medium font-mono text-sm">{selectedProduct.imei || "-"}</p></div>
