@@ -3,7 +3,8 @@ import { db, clientsTable, salesTable } from "@workspace/db";
 import { eq, ilike, or, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 import multer from "multer";
-import * as xlsx from "xlsx";
+import ExcelJS from "exceljs";
+import { Readable } from "stream";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -44,9 +45,22 @@ router.post("/import", requireAdmin, upload.single("file"), async (req, res): Pr
 
   let rows: Record<string, unknown>[] = [];
   try {
-    const wb = xlsx.read(req.file.buffer, { type: "buffer" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    rows = xlsx.utils.sheet_to_json(ws);
+    const wb = new ExcelJS.Workbook();
+    const isCSV = /\.(csv)$/i.test(req.file.originalname) || req.file.mimetype === "text/csv";
+    if (isCSV) {
+      await wb.csv.read(Readable.from(req.file.buffer));
+    } else {
+      await wb.xlsx.load(req.file.buffer as any);
+    }
+    const ws = wb.worksheets[0];
+    const headers: string[] = [];
+    ws.getRow(1).eachCell((cell, col) => { headers[col] = String(cell.value ?? ""); });
+    ws.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const obj: Record<string, unknown> = {};
+      row.eachCell((cell, col) => { const h = headers[col]; if (h) obj[h] = cell.value; });
+      rows.push(obj);
+    });
   } catch {
     res.status(400).json({ error: "Impossible de lire le fichier. Vérifiez le format (.xlsx ou .csv)" });
     return;

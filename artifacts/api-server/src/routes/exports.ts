@@ -1,16 +1,20 @@
 import { Router } from "express";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { db, productsTable, salesTable, expensesTable, clientsTable, movementsTable, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 
 const router = Router();
 
-function sendExcel(res: any, data: Record<string, unknown>[], sheetName: string, filename: string) {
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+async function sendExcel(res: any, data: Record<string, unknown>[], sheetName: string, filename: string): Promise<void> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName);
+  if (data.length > 0) {
+    const keys = Object.keys(data[0]);
+    ws.columns = keys.map(key => ({ header: key, key, width: 20 }));
+    data.forEach(row => ws.addRow(row));
+  }
+  const buf = await wb.xlsx.writeBuffer();
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.send(buf);
@@ -19,7 +23,7 @@ function sendExcel(res: any, data: Record<string, unknown>[], sheetName: string,
 router.get("/stock", requireAuth, async (req, res): Promise<void> => {
   const rows = await db.select().from(productsTable).orderBy(productsTable.id);
   const isAdmin = req.session!.role === "admin";
-  sendExcel(res, rows.map(p => ({
+  await sendExcel(res, rows.map(p => ({
     "ID Produit": p.productId,
     "IMEI": p.imei ?? "",
     "Produit": p.product,
@@ -44,7 +48,7 @@ router.get("/sales", requireAuth, async (req, res): Promise<void> => {
     .leftJoin(usersTable, eq(salesTable.sellerId, usersTable.id))
     .orderBy(salesTable.saleDate);
 
-  sendExcel(res, rows.map(r => ({
+  await sendExcel(res, rows.map(r => ({
     "Date": r.sales.saleDate,
     "Heure": r.sales.saleTime,
     "Client": r.sales.clientName ?? "",
@@ -64,7 +68,7 @@ router.get("/expenses", requireAuth, async (req, res): Promise<void> => {
   const rows = await db.select().from(expensesTable)
     .leftJoin(usersTable, eq(expensesTable.userId, usersTable.id))
     .orderBy(expensesTable.expenseDate);
-  sendExcel(res, rows.map(r => ({
+  await sendExcel(res, rows.map(r => ({
     "Date": r.expenses.expenseDate,
     "Heure": r.expenses.expenseTime,
     "Libellé": r.expenses.label,
@@ -82,7 +86,7 @@ router.get("/clients", requireAdmin, async (req, res): Promise<void> => {
     lastDate: sql<string>`max(${salesTable.saleDate})`,
   }).from(salesTable).where(sql`${salesTable.clientId} is not null AND ${salesTable.cancelled} = false`).groupBy(salesTable.clientId);
   const salesMap = new Map(salesData.map(s => [s.clientId, s]));
-  sendExcel(res, clients.map(c => {
+  await sendExcel(res, clients.map(c => {
     const s = salesMap.get(c.id);
     return {
       "Nom complet": c.fullName,
@@ -104,7 +108,7 @@ router.get("/movements", requireAuth, async (req, res): Promise<void> => {
     sortie_partenaire: "Sortie Partenaire", retour_partenaire: "Retour Partenaire",
     modification_produit: "Modification Produit", suppression_produit: "Suppression Produit", annulation: "Annulation",
   };
-  sendExcel(res, rows.map(r => ({
+  await sendExcel(res, rows.map(r => ({
     "Date": r.movements.movementDate,
     "Heure": r.movements.movementTime,
     "Type": typeLabels[r.movements.movementType] ?? r.movements.movementType,
