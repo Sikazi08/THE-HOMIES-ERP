@@ -168,15 +168,9 @@ router.get("/:id", requireAuth, async (req, res): Promise<void> => {
 router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const isAdmin = req.session!.role === "admin";
-  const userId = req.session!.userId!;
 
   const [existing] = await db.select().from(productsTable).where(eq(productsTable.id, id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Produit non trouvé" }); return; }
-
-  if (!isAdmin && existing.createdByUserId !== userId) {
-    res.status(403).json({ error: "Vous ne pouvez modifier que les produits que vous avez ajoutés" });
-    return;
-  }
 
   const { imei, product, brand, capacity, color, supplier, purchasePrice, sellingPrice, status, entryDate, quantity, entryMethod } = req.body;
 

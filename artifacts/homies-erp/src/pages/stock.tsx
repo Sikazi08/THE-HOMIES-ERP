@@ -252,7 +252,7 @@ function CommonStatusDateFields({ f, forAdd }: { f: ReturnType<typeof useForm<Pr
 }
 
 export default function Stock() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isSecretary } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -512,7 +512,7 @@ export default function Stock() {
                 products.map((product) => {
                   const p = product as any;
                   const isPhone = !p.productType || p.productType === "téléphone";
-                  const canEdit = isAdmin || p.createdByUserId === user?.id;
+                  const canEdit = isAdmin || isSecretary;
                   return (
                     <TableRow key={product.id} className="border-border hover:bg-muted/50 cursor-pointer transition-colors"
                       onClick={() => setSelectedProduct(product)}>
@@ -667,7 +667,7 @@ export default function Stock() {
                   </div>
                 )}
 
-                {(isAdmin || p.createdByUserId === user?.id) && (
+                {(isAdmin || isSecretary) && (
                   <div className="pt-4 flex gap-3 border-t border-border">
                     <Button variant="outline" className="flex-1" onClick={() => openEdit(selectedProduct)}>
                       <Edit2 className="h-4 w-4 mr-2" /> Modifier
