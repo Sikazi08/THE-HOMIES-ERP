@@ -337,10 +337,6 @@ router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
 <div class="header">
   <div class="brand-wrap">
     <img class="logo" src="${LOGO_DATA_URI}" alt="THE HOMIES" onerror="this.style.display='none'" />
-    <div>
-      <div class="brand">THE HOMIES</div>
-      <div class="brand-sub">ERP — Gestion de stock & ventes</div>
-    </div>
   </div>
   <div class="invoice-title">
     <h2>FACTURE</h2>
