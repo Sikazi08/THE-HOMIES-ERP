@@ -10,6 +10,16 @@ const router = Router();
 function nowDateStr() { return new Date().toISOString().split("T")[0]; }
 function nowTimeStr() { return new Date().toTimeString().slice(0, 8); }
 
+function escapeHtml(value: string | null | undefined): string {
+  if (value == null) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 async function generateProductId(): Promise<string> {
   const products = await db.select({ productId: productsTable.productId }).from(productsTable).orderBy(productsTable.id);
   const max = products.reduce((acc, p) => {
@@ -330,11 +340,11 @@ router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
       <th>Couleur</th>
     </tr>
     <tr>
-      <td>${trocProduct.productId || "—"}</td>
-      <td><strong>${trocProduct.product || "—"}</strong>${trocProduct.brand ? ` (${trocProduct.brand})` : ""}</td>
-      <td style="font-family:monospace">${trocProduct.imei || "—"}</td>
-      <td>${trocProduct.capacity || "—"}</td>
-      <td>${trocProduct.color || "—"}</td>
+      <td>${escapeHtml(trocProduct.productId) || "—"}</td>
+      <td><strong>${escapeHtml(trocProduct.product) || "—"}</strong>${trocProduct.brand ? ` (${escapeHtml(trocProduct.brand)})` : ""}</td>
+      <td style="font-family:monospace">${escapeHtml(trocProduct.imei) || "—"}</td>
+      <td>${escapeHtml(trocProduct.capacity) || "—"}</td>
+      <td>${escapeHtml(trocProduct.color) || "—"}</td>
     </tr>
   </table>
 </div>` : "";
@@ -398,21 +408,21 @@ router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
       <div class="section-title">Client</div>
       <div class="info-block">
         <div class="info-label">Nom</div>
-        <div class="info-value">${sale.clientName || "Client anonyme"}</div>
-        ${sale.clientPhone ? `<div class="info-label" style="margin-top:8px">Téléphone</div><div class="info-value">${sale.clientPhone}</div>` : ""}
+        <div class="info-value">${escapeHtml(sale.clientName) || "Client anonyme"}</div>
+        ${sale.clientPhone ? `<div class="info-label" style="margin-top:8px">Téléphone</div><div class="info-value">${escapeHtml(sale.clientPhone)}</div>` : ""}
       </div>
     </div>
     <div>
       <div class="section-title">Informations vente</div>
       <div class="info-block">
         <div class="info-label">Mode de paiement</div>
-        <div class="info-value">${paymentLabel[sale.paymentMode] || sale.paymentMode}</div>
+        <div class="info-value">${escapeHtml(paymentLabel[sale.paymentMode] || sale.paymentMode)}</div>
         <div class="info-label" style="margin-top:8px">Type</div>
         <div class="info-value">
           <span class="badge ${sale.saleType === "troc" ? "badge-troc" : "badge-normal"}">${sale.saleType === "troc" ? "🔄 Troc" : "✅ Vente normale"}</span>
           ${sale.cancelled ? '<span class="badge badge-cancelled" style="margin-left:4px">❌ Annulée</span>' : ""}
         </div>
-        ${sale.vendorName ? `<div class="info-label" style="margin-top:8px">Vendeur</div><div class="info-value">${sale.vendorName}</div>` : ""}
+        ${sale.vendorName ? `<div class="info-label" style="margin-top:8px">Vendeur</div><div class="info-value">${escapeHtml(sale.vendorName)}</div>` : ""}
       </div>
     </div>
   </div>
@@ -430,11 +440,11 @@ ${trocSection}
       <th>Couleur</th>
     </tr>
     <tr>
-      <td>${product?.productId || "—"}</td>
-      <td><strong>${product?.product || "—"}</strong>${product?.brand ? ` (${product.brand})` : ""}</td>
-      <td style="font-family:monospace">${product?.imei || "—"}</td>
-      <td>${product?.capacity || "—"}</td>
-      <td>${product?.color || "—"}</td>
+      <td>${escapeHtml(product?.productId) || "—"}</td>
+      <td><strong>${escapeHtml(product?.product) || "—"}</strong>${product?.brand ? ` (${escapeHtml(product.brand)})` : ""}</td>
+      <td style="font-family:monospace">${escapeHtml(product?.imei) || "—"}</td>
+      <td>${escapeHtml(product?.capacity) || "—"}</td>
+      <td>${escapeHtml(product?.color) || "—"}</td>
     </tr>
   </table>
 </div>
@@ -446,7 +456,7 @@ ${trocSection}
 
 <div class="footer">
   <p>Merci pour votre confiance ! · THE HOMIES — Facture générée automatiquement</p>
-  <p style="margin-top:4px">Numéro de vente: #${id} · Ref produit: ${product?.productId || "—"}</p>
+  <p style="margin-top:4px">Numéro de vente: #${id} · Ref produit: ${escapeHtml(product?.productId) || "—"}</p>
   <button onclick="window.print()" style="margin-top:12px;padding:8px 20px;background:#f97316;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">🖨️ Imprimer / Enregistrer PDF</button>
 </div>
 </body>
