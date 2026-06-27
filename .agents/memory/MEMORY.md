@@ -2,6 +2,7 @@
 - [Troc attachments flow](troc-attachments.md) — base64 in DB (troc_attachments table); upload after sale creation using trocProductId from onSuccess response; view/download in stock detail sheet.
 - [Invoice logo via base64](invoice-logo-base64.md) — embed logo as base64 in api-server invoice HTML; /homies-erp/logo.png returns SPA html/404 for api-served pages.
 - [ERP stack conventions](erp-stack.md) — pnpm monorepo, api-server on 8080, homies-erp Vite on dynamic PORT; do NOT use Orval hooks for new endpoints, use useQuery/fetch directly.
+- [Dual-database gotcha](dual-database-gotcha.md) — app uses SUPABASE_DATABASE_URL (live), NOT DATABASE_URL (helium, unused); all schema/data work must target Supabase or the app won't see it.
 - [PWA kill-switch](pwa-killswitch.md) — removing PWA from source doesn't evict already-registered service workers; ship a self-unregistering sw.js at the same URL.
 - [Supabase FK drift](supabase-fk-drift.md) — primary DB is external Supabase (dev+prod same); Drizzle `.references()` changes are NOT auto-migrated, fix FKs with manual ALTER TABLE.
 - [Drizzle push & stale dist types](drizzle-push-and-dist-types.md) — push wants to DROP express-session table; use manual ALTER instead; regen db dist .d.ts with `tsc -b --force` after schema edits or api-server typecheck sees stale types.

@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Plus, Search, Download, Ban, Upload, FileText, ChevronLeft, ChevronRight, Smartphone, Package, Eye, Printer, Paperclip } from "lucide-react";
+import { Loader2, Plus, Search, Download, Ban, Upload, FileText, ChevronLeft, ChevronRight, Smartphone, Package, Eye, Printer, Paperclip, Pencil } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { ProductSearchCombobox } from "@/components/product-combobox";
@@ -69,6 +69,11 @@ export default function Ventes() {
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
   const [trocAttachments, setTrocAttachments] = useState<any[]>([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editClientName, setEditClientName] = useState("");
+  const [editClientPhone, setEditClientPhone] = useState("");
+  const [editVendorId, setEditVendorId] = useState("0");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     const s = selectedSale as any;
@@ -184,6 +189,43 @@ export default function Ventes() {
         toast.error(msg || "Erreur lors de l'enregistrement de la vente");
       },
     });
+  };
+
+  const openEditDialog = (s: any) => {
+    setEditClientName(s.clientName || "");
+    setEditClientPhone(s.clientPhone || "");
+    setEditVendorId(s.vendorId ? String(s.vendorId) : "0");
+    setIsEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedSale) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/sales/${selectedSale.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: editClientName,
+          clientPhone: editClientPhone,
+          vendorId: editVendorId === "0" ? null : Number(editVendorId),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Erreur lors de la modification");
+      }
+      const updated = await res.json();
+      toast.success("Vente modifiée avec succès ✓");
+      setSelectedSale((prev: any) => (prev ? { ...prev, ...updated } : prev));
+      queryClient.invalidateQueries({ queryKey: getListSalesQueryKey() });
+      setIsEditOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur lors de la modification");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const handleCancelSale = (id: number) => {
@@ -637,22 +679,18 @@ export default function Ventes() {
                   </div>
                 </div>
 
-                {(s.clientName || s.clientPhone) && (
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Client</h4>
-                    <div className="bg-muted/30 rounded-lg p-3 border border-border">
-                      {s.clientName && <p className="font-medium">{s.clientName}</p>}
-                      {s.clientPhone && <p className="text-sm text-muted-foreground">{s.clientPhone}</p>}
-                    </div>
-                  </div>
-                )}
-
-                {s.vendorName && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Client</h4>
                   <div className="bg-muted/30 rounded-lg p-3 border border-border">
-                    <p className="text-xs text-muted-foreground mb-1">Vendeur</p>
-                    <p className="font-medium text-sm">{s.vendorName}</p>
+                    {s.clientName ? <p className="font-medium">{s.clientName}</p> : <p className="text-sm text-muted-foreground italic">Client anonyme</p>}
+                    {s.clientPhone && <p className="text-sm text-muted-foreground">{s.clientPhone}</p>}
                   </div>
-                )}
+                </div>
+
+                <div className="bg-muted/30 rounded-lg p-3 border border-border">
+                  <p className="text-xs text-muted-foreground mb-1">Vendeur</p>
+                  <p className="font-medium text-sm">{s.vendorName || "—"}</p>
+                </div>
 
                 {s.saleType === "troc" && (
                   <div className="space-y-2">
@@ -704,6 +742,11 @@ export default function Ventes() {
                 )}
 
                 <div className="pt-4 border-t border-border space-y-3">
+                  {!s.cancelled && (
+                    <Button className="w-full" variant="outline" onClick={() => openEditDialog(s)}>
+                      <Pencil className="h-4 w-4 mr-2" /> Modifier client / vendeur
+                    </Button>
+                  )}
                   <Button className="w-full" variant="outline"
                     onClick={() => window.open(`/api/sales/${s.id}/invoice`, "_blank")}>
                     <Printer className="h-4 w-4 mr-2" /> Voir & Télécharger la facture
@@ -714,6 +757,38 @@ export default function Ventes() {
           })()}
         </SheetContent>
       </Sheet>
+
+      {/* Edit client / vendor dialog (admin + secretary) */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[440px] bg-card border-border text-foreground">
+          <DialogHeader><DialogTitle>Modifier la vente</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-client-name">Nom du client</Label>
+              <Input id="edit-client-name" value={editClientName}
+                onChange={e => setEditClientName(e.target.value)} placeholder="Client anonyme" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-client-phone">Téléphone du client</Label>
+              <Input id="edit-client-phone" value={editClientPhone}
+                onChange={e => setEditClientPhone(e.target.value)} placeholder="Optionnel" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Vendeur externe</Label>
+              <Select value={editVendorId} onValueChange={setEditVendorId}>
+                <SelectTrigger><SelectValue placeholder="Aucun" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Aucun</SelectItem>
+                  {sellers.map(s => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Enregistrer"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

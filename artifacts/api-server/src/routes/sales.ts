@@ -220,6 +220,53 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json({ ...sale, amount: Number(sale.amount) });
 });
 
+// PATCH /api/sales/:id — edit client name, client phone, and vendor (admin + secretary)
+router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const { clientName, clientPhone, vendorId } = req.body as {
+    clientName?: string | null;
+    clientPhone?: string | null;
+    vendorId?: number | string | null;
+  };
+
+  const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, id)).limit(1);
+  if (!sale) { res.status(404).json({ error: "Vente non trouvée" }); return; }
+  if (sale.cancelled) { res.status(400).json({ error: "Une vente annulée ne peut pas être modifiée" }); return; }
+
+  const updates: Partial<typeof salesTable.$inferInsert> = {};
+
+  if (clientName !== undefined) {
+    const trimmed = typeof clientName === "string" ? clientName.trim() : "";
+    updates.clientName = trimmed || null;
+  }
+  if (clientPhone !== undefined) {
+    const trimmed = typeof clientPhone === "string" ? clientPhone.trim() : "";
+    updates.clientPhone = trimmed || null;
+  }
+  if (vendorId !== undefined) {
+    if (vendorId === null || vendorId === "" || vendorId === 0 || vendorId === "0") {
+      updates.vendorId = null;
+      updates.vendorName = null;
+    } else {
+      const vid = parseInt(String(vendorId));
+      if (isNaN(vid) || vid < 0) { res.status(400).json({ error: "Vendeur invalide" }); return; }
+      const [vendor] = await db.select().from(sellersTable).where(eq(sellersTable.id, vid)).limit(1);
+      if (!vendor) { res.status(400).json({ error: "Vendeur introuvable" }); return; }
+      updates.vendorId = vendor.id;
+      updates.vendorName = vendor.name;
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "Aucune modification fournie" });
+    return;
+  }
+
+  const [updated] = await db.update(salesTable).set(updates).where(eq(salesTable.id, id)).returning();
+
+  res.json({ ...updated, amount: Number(updated.amount) });
+});
+
 router.post("/:id/cancel", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const { reason } = req.body;
