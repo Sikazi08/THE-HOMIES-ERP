@@ -101,7 +101,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const { label, amount, expenseDate, note } = req.body;
 
   const [existing] = await db.select().from(expensesTable).where(eq(expensesTable.id, id));
@@ -138,7 +138,7 @@ router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.delete("/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   await db.delete(expensesTable).where(eq(expensesTable.id, id));
   res.status(204).send();
 });

@@ -36,7 +36,7 @@ router.post("/", requireAdmin, async (req, res): Promise<void> => {
 });
 
 router.patch("/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const { name, phone, address, notes, isActive } = req.body;
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
@@ -50,7 +50,7 @@ router.patch("/:id", requireAdmin, async (req, res): Promise<void> => {
 });
 
 router.delete("/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const [row] = await db.select().from(sellersTable).where(eq(sellersTable.id, id)).limit(1);
   if (!row) { res.status(404).json({ error: "Vendeur non trouvé" }); return; }
   await db.delete(sellersTable).where(eq(sellersTable.id, id));
@@ -58,7 +58,7 @@ router.delete("/:id", requireAdmin, async (req, res): Promise<void> => {
 });
 
 router.get("/:id/sales", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const rows = await db.select().from(salesTable)
     .leftJoin(productsTable, eq(salesTable.productId, productsTable.id))
     .where(eq(salesTable.vendorId, id))

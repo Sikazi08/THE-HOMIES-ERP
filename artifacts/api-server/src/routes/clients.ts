@@ -101,7 +101,7 @@ router.post("/import", requireAdmin, upload.single("file"), async (req, res): Pr
 });
 
 router.get("/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const [client] = await db.select().from(clientsTable).where(eq(clientsTable.id, id)).limit(1);
   if (!client) { res.status(404).json({ error: "Client non trouvé" }); return; }
   const purchases = await db.select().from(salesTable).where(eq(salesTable.clientId, id)).orderBy(salesTable.saleDate);
@@ -116,7 +116,7 @@ router.get("/:id", requireAdmin, async (req, res): Promise<void> => {
 });
 
 router.patch("/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const { fullName, phone } = req.body;
   const updates: Record<string, unknown> = {};
   if (fullName) updates.fullName = fullName;

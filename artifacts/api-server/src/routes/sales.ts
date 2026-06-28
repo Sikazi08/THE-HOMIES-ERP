@@ -232,7 +232,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
 
 // PATCH /api/sales/:id — edit client name, client phone, and vendor (admin + secretary)
 router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const { clientName, clientPhone, vendorId } = req.body as {
     clientName?: string | null;
     clientPhone?: string | null;
@@ -278,7 +278,7 @@ router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.post("/:id/cancel", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const { reason } = req.body;
   if (!reason) { res.status(400).json({ error: "La raison d'annulation est requise" }); return; }
 
@@ -312,7 +312,7 @@ router.post("/:id/cancel", requireAuth, async (req, res): Promise<void> => {
 
 // GET /api/sales/:id/invoice — HTML invoice for printing
 router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, id)).limit(1);
   if (!sale) { res.status(404).send("Vente non trouvée"); return; }
 

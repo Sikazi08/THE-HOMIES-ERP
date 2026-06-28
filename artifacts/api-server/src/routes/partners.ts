@@ -20,7 +20,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const { name, phone, address } = req.body;
   const updates: Record<string, unknown> = {};
   if (name) updates.name = name;
@@ -32,7 +32,7 @@ router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.delete("/:id", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   await db.delete(partnersTable).where(eq(partnersTable.id, id));
   res.status(204).send();
 });
