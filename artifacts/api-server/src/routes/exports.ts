@@ -58,7 +58,7 @@ router.get("/sales", requireAuth, async (req, res): Promise<void> => {
     "ID Produit": r.products?.productId ?? "",
     "Vendeur": r.users?.fullName ?? "",
     "Mode de paiement": r.sales.paymentMode,
-    "Type": r.sales.saleType === "normal" ? "Vente normale" : "Troc",
+    "Type": r.sales.saleType === "normal" ? "Vente normale" : r.sales.saleType === "troc" ? "Troc" : "Fast deal",
     "Montant (FCFA)": Number(r.sales.amount),
     "Annulé": r.sales.cancelled ? "Oui" : "Non",
   })), "Ventes", "ventes_homies_erp.xlsx");

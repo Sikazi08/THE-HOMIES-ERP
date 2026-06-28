@@ -4,6 +4,7 @@ import { eq, ilike, or, and, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { formatFCFA_server } from "../utils/format";
 import { LOGO_DATA_URI } from "../logo";
+import { formatAmountWithWords, numberToWordsFr } from "./sales-invoice-utils.js";
 
 const router = Router();
 
@@ -18,6 +19,12 @@ function escapeHtml(value: string | null | undefined): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#x27;");
+}
+
+function saleTypeLabel(type: string | null | undefined): string {
+  if (type === "troc") return "Troc";
+  if (type === "fast_deal") return "Fast deal";
+  return "Vente normale";
 }
 
 async function generateProductId(): Promise<string> {
@@ -100,6 +107,12 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  const normalizedSaleType = ["normal", "troc", "fast_deal"].includes(String(saleType)) ? String(saleType) : null;
+  if (!normalizedSaleType) {
+    res.status(400).json({ error: "Type de vente invalide" });
+    return;
+  }
+
   const [product] = await db.select().from(productsTable).where(eq(productsTable.id, parseInt(productId))).limit(1);
   if (!product) { res.status(404).json({ error: "Produit non trouvé" }); return; }
   if (product.status === "vendu") { res.status(400).json({ error: "Ce produit est déjà vendu" }); return; }
@@ -113,7 +126,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
   }
 
   // Troc only allowed for phones
-  if (saleType === "troc" && isAccessoire) {
+  if (normalizedSaleType === "troc" && isAccessoire) {
     res.status(400).json({ error: "Le troc n'est pas disponible pour les appareils/accessoires" });
     return;
   }
@@ -149,7 +162,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
   }
 
   let trocProductId: number | null = null;
-  if (saleType === "troc" && trocProduct) {
+  if (normalizedSaleType === "troc" && trocProduct) {
     const trocProdId = await generateProductId();
     const trocPurchasePrice = product.sellingPrice !== null
       ? Math.max(0, Number(product.sellingPrice) - Number(amount))
@@ -186,7 +199,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
 
   const [sale] = await db.insert(salesTable).values({
     productId: parseInt(productId),
-    saleType,
+    saleType: normalizedSaleType,
     paymentMode,
     amount: String(amount),
     clientId,
@@ -224,7 +237,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
     productId: parseInt(productId),
     productRef: product.productId,
     imei: product.imei,
-    description: `Vente ${saleType === "troc" ? "(Troc) " : ""}${product.product}${product.brand ? " " + product.brand : ""}${isAccessoire ? ` x${qty}` : ""} - ${amount} FCFA - ${paymentMode}${clientName ? " - " + clientName : ""}${resolvedVendorName ? " (Vendeur: " + resolvedVendorName + ")" : ""}`,
+    description: `Vente ${normalizedSaleType === "troc" ? "(Troc) " : normalizedSaleType === "fast_deal" ? "(Fast deal) " : ""}${product.product}${product.brand ? " " + product.brand : ""}${isAccessoire ? ` x${qty}` : ""} - ${amount} FCFA - ${paymentMode}${clientName ? " - " + clientName : ""}${resolvedVendorName ? " (Vendeur: " + resolvedVendorName + ")" : ""}`,
   });
 
   res.status(201).json({ ...sale, amount: Number(sale.amount) });
@@ -233,6 +246,12 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
 // PATCH /api/sales/:id — edit client name, client phone, and vendor (admin + secretary)
 router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
+  const currentRole = req.session!.role;
+  if (currentRole !== "admin" && currentRole !== "secretary") {
+    res.status(403).json({ error: "Vous n'avez pas les droits pour modifier une vente" });
+    return;
+  }
+
   const { clientName, clientPhone, vendorId } = req.body as {
     clientName?: string | null;
     clientPhone?: string | null;
@@ -273,6 +292,23 @@ router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
   }
 
   const [updated] = await db.update(salesTable).set(updates).where(eq(salesTable.id, id)).returning();
+
+  const [product] = await db.select().from(productsTable).where(eq(productsTable.id, sale.productId)).limit(1);
+  const changeSummary = [] as string[];
+  if (clientName !== undefined) changeSummary.push(`client: ${clientName || "anonyme"}`);
+  if (clientPhone !== undefined) changeSummary.push(`téléphone: ${clientPhone || "—"}`);
+  if (vendorId !== undefined) changeSummary.push(`vendeur: ${updates.vendorName || "Aucun"}`);
+
+  await db.insert(movementsTable).values({
+    movementType: "modification_produit",
+    movementDate: nowDateStr(),
+    movementTime: nowTimeStr(),
+    userId: req.session!.userId!,
+    productId: sale.productId,
+    productRef: product?.productId ?? null,
+    imei: product?.imei ?? null,
+    description: `Modification vente #${id}: ${changeSummary.join(" · ") || "mise à jour"}`,
+  });
 
   res.json({ ...updated, amount: Number(updated.amount) });
 });
@@ -328,6 +364,7 @@ router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
 
   const isTroc = sale.saleType === "troc";
   const soldTitle = isTroc ? "📱 Téléphone pris par le client" : "Produit vendu";
+  const amountInWords = formatAmountWithWords(Number(sale.amount));
   const trocSection = isTroc && trocProduct ? `
 <div class="section">
   <div class="section-title">🔄 Téléphone remis par le client (Troc)</div>
@@ -347,6 +384,14 @@ router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
       <td>${escapeHtml(trocProduct.color) || "—"}</td>
     </tr>
   </table>
+</div>` : "";
+
+  const trocDeclarationSection = isTroc ? `
+<div class="section">
+  <div class="section-title">📝 Déclaration des parties</div>
+  <p style="font-size:13px; line-height:1.7; color:#333; text-align:justify;">
+    Nous soussignés, <strong>${escapeHtml(sale.clientName) || "Client anonyme"}</strong> et THE HOMIES, déclarons que l’échange décrit ci-dessus a été effectué librement, volontairement et sans contestation. Les informations relatives au téléphone remis en troc et à la vente effectuée sont exactes et conformes à la réalité.
+  </p>
 </div>` : "";
 
   const html = `<!DOCTYPE html>
@@ -378,6 +423,7 @@ router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
   .total-section { background: linear-gradient(135deg, #f97316, #ea580c); color: white; border-radius: 10px; padding: 20px; text-align: right; }
   .total-label { font-size: 13px; opacity: 0.9; }
   .total-amount { font-size: 32px; font-weight: 900; letter-spacing: -1px; }
+  .amount-words { font-size: 13px; margin-top: 8px; color: #444; font-style: italic; }
   .footer { text-align: center; color: #aaa; font-size: 11px; margin-top: 32px; border-top: 1px solid #eee; padding-top: 16px; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
   .badge-normal { background: #e8f5e9; color: #2e7d32; }
@@ -428,7 +474,7 @@ router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
   </div>
 </div>
 
-${trocSection}
+${trocSection}${trocDeclarationSection}
 <div class="section">
   <div class="section-title">${soldTitle}</div>
   <table class="product-table">
@@ -452,6 +498,7 @@ ${trocSection}
 <div class="total-section">
   <div class="total-label">MONTANT TOTAL</div>
   <div class="total-amount">${formatFCFA_server(Number(sale.amount))}</div>
+  <div class="amount-words"><strong>Montant en toutes lettres :</strong> ${escapeHtml(amountInWords)}</div>
 </div>
 
 <div class="footer">

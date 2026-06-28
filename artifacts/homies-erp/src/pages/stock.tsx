@@ -122,9 +122,14 @@ function AttachmentsSection({ productId }: { productId: number }) {
 const BRANDS = ["Apple", "Samsung", "Xiaomi", "Tecno", "Infinix", "itel", "Huawei", "Oppo", "Vivo", "Realme", "Nokia", "Autre"];
 const CAPACITIES = ["16 Go", "32 Go", "64 Go", "128 Go", "256 Go", "512 Go", "1 To"];
 const COLORS = ["Noir", "Blanc", "Bleu", "Rouge", "Or", "Argent", "Vert", "Gris", "Rose", "Violet", "Autre"];
+const PHONE_STATES = [
+  { value: "OPEN BOX", label: "OPEN BOX" },
+  { value: "OCCASION", label: "OCCASION" },
+  { value: "NEUF SCELLER", label: "NEUF SCELLER" },
+];
 const PAGE_SIZE = 25;
 
-type ProductFormData = ProductInput & { productType?: string; quantity?: number; entryMethod?: string };
+type ProductFormData = ProductInput & { productType?: string; quantity?: number; entryMethod?: string; phoneState?: string };
 
 function PhoneFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductFormData>>; isAdmin: boolean }) {
   return (
@@ -166,6 +171,15 @@ function PhoneFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductF
         )} />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormField control={f.control} name="phoneState" rules={{ required: "L'état du téléphone est obligatoire" }} render={({ field }) => (
+          <FormItem><FormLabel>État du téléphone *</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value ?? ""}>
+              <FormControl><SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger></FormControl>
+              <SelectContent>
+                {PHONE_STATES.map(state => <SelectItem key={state.value} value={state.value}>{state.label}</SelectItem>)}
+              </SelectContent>
+            </Select><FormMessage /></FormItem>
+        )} />
         <FormField control={f.control} name={"entryMethod" as keyof ProductFormData} render={({ field }) => (
           <FormItem><FormLabel>Méthode d'entrée</FormLabel>
             <Select onValueChange={field.onChange} value={(field.value as string) ?? "achat"}>
@@ -176,6 +190,8 @@ function PhoneFormFields({ f, isAdmin }: { f: ReturnType<typeof useForm<ProductF
               </SelectContent>
             </Select><FormMessage /></FormItem>
         )} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
           <Label className="text-sm">Quantité</Label>
           <Input value="1" disabled className="bg-muted/40" />
@@ -292,8 +308,8 @@ export default function Stock() {
   const updateMutation = useUpdateProduct();
   const deleteMutation = useDeleteProduct();
 
-  const defaultPhoneValues = { product: "", brand: "", status: "en_stock" as const, entryDate: format(new Date(), "yyyy-MM-dd"), productType: "téléphone", quantity: 1, entryMethod: "achat" };
-  const defaultAccValues = { product: "", brand: "", status: "en_stock" as const, entryDate: format(new Date(), "yyyy-MM-dd"), productType: "accessoire", quantity: 1, entryMethod: undefined };
+  const defaultPhoneValues = { product: "", brand: "", status: "en_stock" as const, entryDate: format(new Date(), "yyyy-MM-dd"), productType: "téléphone", quantity: 1, entryMethod: "achat", phoneState: "OPEN BOX" };
+  const defaultAccValues = { product: "", brand: "", status: "en_stock" as const, entryDate: format(new Date(), "yyyy-MM-dd"), productType: "accessoire", quantity: 1, entryMethod: undefined, phoneState: undefined };
 
   const form = useForm<ProductFormData>({ defaultValues: defaultPhoneValues });
   const editForm = useForm<ProductFormData>({ defaultValues: { product: "", brand: "", status: "en_stock", entryDate: "" } });
@@ -343,6 +359,10 @@ export default function Stock() {
 
   const onEditSubmit = (data: ProductFormData) => {
     if (!selectedProduct) return;
+    if (!isAdmin && !isSecretary) {
+      toast.error("Vous n'avez pas les droits pour modifier un produit");
+      return;
+    }
     updateMutation.mutate({ id: selectedProduct.id, data: data as ProductInput }, {
       onSuccess: () => {
         toast.success("Produit modifié avec succès");
@@ -374,6 +394,7 @@ export default function Stock() {
       productType: p.productType ?? "téléphone",
       quantity: p.quantity ?? 1,
       entryMethod: p.entryMethod ?? "achat",
+      phoneState: p.phoneState ?? "OPEN BOX",
     });
     setIsEditOpen(true);
   };

@@ -87,6 +87,8 @@ export interface Product {
   /** @nullable */
   color?: string | null;
   /** @nullable */
+  phoneState?: string | null;
+  /** @nullable */
   supplier?: string | null;
   /**
      * Hidden from secretary
@@ -164,6 +166,7 @@ export type SaleSaleType = typeof SaleSaleType[keyof typeof SaleSaleType];
 export const SaleSaleType = {
   normal: 'normal',
   troc: 'troc',
+  fast_deal: 'fast_deal',
 } as const;
 
 export type SalePaymentMode = typeof SalePaymentMode[keyof typeof SalePaymentMode];
@@ -213,6 +216,7 @@ export type SaleInputSaleType = typeof SaleInputSaleType[keyof typeof SaleInputS
 export const SaleInputSaleType = {
   normal: 'normal',
   troc: 'troc',
+  fast_deal: 'fast_deal',
 } as const;
 
 export type SaleInputPaymentMode = typeof SaleInputPaymentMode[keyof typeof SaleInputPaymentMode];

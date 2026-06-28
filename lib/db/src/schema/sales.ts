@@ -6,7 +6,7 @@ import { usersTable } from "./users";
 import { clientsTable } from "./clients";
 import { sellersTable } from "./sellers";
 
-export const saleTypeEnum = pgEnum("sale_type", ["normal", "troc"]);
+export const saleTypeEnum = pgEnum("sale_type", ["normal", "troc", "fast_deal"]);
 export const paymentModeEnum = pgEnum("payment_mode", ["OM", "MOMO", "Cash"]);
 
 export const salesTable = pgTable("sales", {

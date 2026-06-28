@@ -1133,7 +1133,7 @@ components:
           $ref: "#/components/schemas/Product"
         saleType:
           type: string
-          enum: [normal, troc]
+          enum: [normal, troc, fast_deal]
         paymentMode:
           type: string
           enum: [OM, MOMO, Cash]
@@ -1177,7 +1177,7 @@ components:
           type: integer
         saleType:
           type: string
-          enum: [normal, troc]
+          enum: [normal, troc, fast_deal]
         paymentMode:
           type: string
           enum: [OM, MOMO, Cash]

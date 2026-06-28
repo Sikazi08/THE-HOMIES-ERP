@@ -287,6 +287,7 @@ export default function Ventes() {
                           <SelectContent>
                             <SelectItem value="normal">Vente normale</SelectItem>
                             {!isAccessoire && <SelectItem value="troc">Troc</SelectItem>}
+                            <SelectItem value="fast_deal">Fast deal</SelectItem>
                           </SelectContent>
                         </Select><FormMessage /></FormItem>
                     )} />
@@ -583,8 +584,8 @@ export default function Ventes() {
                     <TableCell className="text-sm text-muted-foreground">{sale.vendorName || "-"}</TableCell>
                     <TableCell><Badge variant="outline" className="bg-background">{sale.paymentMode}</Badge></TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className={sale.saleType === "troc" ? "bg-primary/20 text-primary border-primary/20" : ""}>
-                        {sale.saleType === "normal" ? "Normal" : "Troc"}
+                      <Badge variant="secondary" className={sale.saleType === "troc" || sale.saleType === "fast_deal" ? "bg-primary/20 text-primary border-primary/20" : ""}>
+                        {sale.saleType === "troc" ? "Troc" : sale.saleType === "fast_deal" ? "Fast deal" : "Normal"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-bold">{formatFCFA(sale.amount)}</TableCell>
@@ -659,8 +660,8 @@ export default function Ventes() {
                   </div>
                   <div className="bg-muted/30 rounded-lg p-3 border border-border">
                     <p className="text-xs text-muted-foreground mb-1">Type</p>
-                    <Badge className={s.saleType === "troc" ? "bg-primary/20 text-primary" : "bg-green-500/20 text-green-400"}>
-                      {s.saleType === "troc" ? "🔄 Troc" : "✅ Normal"}
+                    <Badge className={s.saleType === "troc" || s.saleType === "fast_deal" ? "bg-primary/20 text-primary" : "bg-green-500/20 text-green-400"}>
+                      {s.saleType === "troc" ? "🔄 Troc" : s.saleType === "fast_deal" ? "⚡ Fast deal" : "✅ Normal"}
                     </Badge>
                   </div>
                 </div>

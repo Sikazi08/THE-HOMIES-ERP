@@ -24,6 +24,7 @@ function mapProduct(p: typeof productsTable.$inferSelect, isAdmin: boolean, part
   return {
     ...p,
     brand: p.brand || null,
+    phoneState: p.phoneState || null,
     purchasePrice: isAdmin ? (p.purchasePrice !== null ? Number(p.purchasePrice) : null) : undefined,
     sellingPrice: p.sellingPrice !== null ? Number(p.sellingPrice) : null,
     profit: isAdmin && p.purchasePrice !== null && p.sellingPrice !== null
@@ -99,7 +100,7 @@ router.get("/", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/", requireAuth, async (req, res): Promise<void> => {
   const {
-    imei, product, brand, capacity, color, supplier,
+    imei, product, brand, capacity, color, phoneState, supplier,
     purchasePrice, sellingPrice, status, entryDate,
     productType = "téléphone", quantity = 1, entryMethod = "achat"
   } = req.body;
@@ -132,6 +133,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
     brand: brand || null,
     capacity: productType === "téléphone" ? (capacity || null) : null,
     color: productType === "téléphone" ? (color || null) : null,
+    phoneState: productType === "téléphone" ? (phoneState || null) : null,
     supplier: supplier || null,
     purchasePrice: isAdmin && purchasePrice !== undefined && purchasePrice !== "" ? String(purchasePrice) : null,
     sellingPrice: sellingPrice !== undefined && sellingPrice !== "" ? String(sellingPrice) : null,
@@ -168,12 +170,18 @@ router.get("/:id", requireAuth, async (req, res): Promise<void> => {
 
 router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
-  const isAdmin = req.session!.role === "admin";
+  const role = req.session!.role;
+  const isAdmin = role === "admin";
+  const isSecretary = role === "secretary";
+  if (!isAdmin && !isSecretary) {
+    res.status(403).json({ error: "Vous n'avez pas les droits pour modifier un produit" });
+    return;
+  }
 
   const [existing] = await db.select().from(productsTable).where(eq(productsTable.id, id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Produit non trouvé" }); return; }
 
-  const { imei, product, brand, capacity, color, supplier, purchasePrice, sellingPrice, status, entryDate, quantity, entryMethod } = req.body;
+  const { imei, product, brand, capacity, color, phoneState, supplier, purchasePrice, sellingPrice, status, entryDate, quantity, entryMethod } = req.body;
 
   if (!isAdmin && purchasePrice !== undefined) {
     res.status(403).json({ error: "Seul l'admin peut modifier le prix d'achat" });
@@ -195,6 +203,7 @@ router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
   if (brand !== undefined) updates.brand = brand || null;
   if (capacity !== undefined) updates.capacity = capacity || null;
   if (color !== undefined) updates.color = color || null;
+  if (phoneState !== undefined) updates.phoneState = phoneState || null;
   if (supplier !== undefined) updates.supplier = supplier || null;
   if (isAdmin && purchasePrice !== undefined) updates.purchasePrice = purchasePrice !== "" ? String(purchasePrice) : null;
   if (sellingPrice !== undefined) updates.sellingPrice = sellingPrice !== "" ? String(sellingPrice) : null;
@@ -204,6 +213,17 @@ router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
   if (entryMethod !== undefined) updates.entryMethod = entryMethod || null;
 
   const [row] = await db.update(productsTable).set(updates).where(eq(productsTable.id, id)).returning();
+
+  await db.insert(movementsTable).values({
+    movementType: "modification_produit",
+    movementDate: nowDateStr(),
+    movementTime: nowTimeStr(),
+    userId: req.session!.userId!,
+    productId: row.id,
+    productRef: row.productId,
+    imei: row.imei,
+    description: `Modification produit ${row.product}${row.brand ? " " + row.brand : ""} (${row.productId}) par ${isAdmin ? "admin" : "secrétaire"}`,
+  });
 
   res.json(mapProduct(row, isAdmin));
 });

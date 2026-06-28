@@ -12,6 +12,7 @@ export const productsTable = pgTable("products", {
   brand: text("brand"),
   capacity: text("capacity"),
   color: text("color"),
+  phoneState: text("phone_state"),
   supplier: text("supplier"),
   purchasePrice: numeric("purchase_price", { precision: 12, scale: 2 }),
   sellingPrice: numeric("selling_price", { precision: 12, scale: 2 }),
