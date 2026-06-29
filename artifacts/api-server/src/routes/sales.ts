@@ -7,6 +7,11 @@ import { LOGO_DATA_URI } from "../logo";
 import { formatAmountWithWords, numberToWordsFr } from "./sales-invoice-utils.js";
 
 const router = Router();
+const saleTypes = ["normal", "troc", "fast_deal"] as const;
+const paymentModes = ["OM", "MOMO", "Cash"] as const;
+
+type SaleType = typeof saleTypes[number];
+type PaymentMode = typeof paymentModes[number];
 
 function nowDateStr() { return new Date().toISOString().split("T")[0]; }
 function nowTimeStr() { return new Date().toTimeString().slice(0, 8); }
@@ -25,6 +30,14 @@ function saleTypeLabel(type: string | null | undefined): string {
   if (type === "troc") return "Troc";
   if (type === "fast_deal") return "Fast deal";
   return "Vente normale";
+}
+
+function isSaleType(value: unknown): value is SaleType {
+  return saleTypes.includes(value as SaleType);
+}
+
+function isPaymentMode(value: unknown): value is PaymentMode {
+  return paymentModes.includes(value as PaymentMode);
 }
 
 async function generateProductId(): Promise<string> {
@@ -107,9 +120,14 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const normalizedSaleType = ["normal", "troc", "fast_deal"].includes(String(saleType)) ? String(saleType) : null;
-  if (!normalizedSaleType) {
+  const normalizedSaleType = String(saleType);
+  if (!isSaleType(normalizedSaleType)) {
     res.status(400).json({ error: "Type de vente invalide" });
+    return;
+  }
+  const normalizedPaymentMode = String(paymentMode);
+  if (!isPaymentMode(normalizedPaymentMode)) {
+    res.status(400).json({ error: "Mode de paiement invalide" });
     return;
   }
 
@@ -200,7 +218,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
   const [sale] = await db.insert(salesTable).values({
     productId: parseInt(productId),
     saleType: normalizedSaleType,
-    paymentMode,
+    paymentMode: normalizedPaymentMode,
     amount: String(amount),
     clientId,
     clientName: clientName || null,
@@ -237,7 +255,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
     productId: parseInt(productId),
     productRef: product.productId,
     imei: product.imei,
-    description: `Vente ${normalizedSaleType === "troc" ? "(Troc) " : normalizedSaleType === "fast_deal" ? "(Fast deal) " : ""}${product.product}${product.brand ? " " + product.brand : ""}${isAccessoire ? ` x${qty}` : ""} - ${amount} FCFA - ${paymentMode}${clientName ? " - " + clientName : ""}${resolvedVendorName ? " (Vendeur: " + resolvedVendorName + ")" : ""}`,
+    description: `Vente ${normalizedSaleType === "troc" ? "(Troc) " : normalizedSaleType === "fast_deal" ? "(Fast deal) " : ""}${product.product}${product.brand ? " " + product.brand : ""}${isAccessoire ? ` x${qty}` : ""} - ${amount} FCFA - ${normalizedPaymentMode}${clientName ? " - " + clientName : ""}${resolvedVendorName ? " (Vendeur: " + resolvedVendorName + ")" : ""}`,
   });
 
   res.status(201).json({ ...sale, amount: Number(sale.amount) });
@@ -245,7 +263,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
 
 // PATCH /api/sales/:id — edit client name, client phone, and vendor (admin + secretary)
 router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const currentRole = req.session!.role;
   if (currentRole !== "admin" && currentRole !== "secretary") {
     res.status(403).json({ error: "Vous n'avez pas les droits pour modifier une vente" });
@@ -314,7 +332,7 @@ router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.post("/:id/cancel", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const { reason } = req.body;
   if (!reason) { res.status(400).json({ error: "La raison d'annulation est requise" }); return; }
 
@@ -348,7 +366,7 @@ router.post("/:id/cancel", requireAuth, async (req, res): Promise<void> => {
 
 // GET /api/sales/:id/invoice — HTML invoice for printing
 router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, id)).limit(1);
   if (!sale) { res.status(404).send("Vente non trouvée"); return; }
 

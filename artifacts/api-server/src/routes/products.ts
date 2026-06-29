@@ -160,7 +160,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.get("/:id", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const [row] = await db.select().from(productsTable).where(eq(productsTable.id, id)).limit(1);
   if (!row) { res.status(404).json({ error: "Produit non trouvé" }); return; }
   const isAdmin = req.session!.role === "admin";
@@ -169,7 +169,7 @@ router.get("/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const role = req.session!.role;
   const isAdmin = role === "admin";
   const isSecretary = role === "secretary";
@@ -229,7 +229,7 @@ router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.delete("/:id", requireAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const isAdmin = req.session!.role === "admin";
   const userId = req.session!.userId!;
 

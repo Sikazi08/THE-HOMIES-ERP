@@ -39,7 +39,7 @@ router.post("/", requireAdmin, async (req, res): Promise<void> => {
 });
 
 router.patch("/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const { username, password, fullName, role } = req.body;
   const updates: Record<string, unknown> = {};
   if (username) updates.username = username;
@@ -55,7 +55,7 @@ router.patch("/:id", requireAdmin, async (req, res): Promise<void> => {
 });
 
 router.delete("/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   if (id === req.session!.userId) {
     res.status(400).json({ error: "Vous ne pouvez pas supprimer votre propre compte" });
     return;

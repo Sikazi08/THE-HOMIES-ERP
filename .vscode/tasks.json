@@ -1,0 +1,40 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Backend",
+      "type": "shell",
+      "command": "cmd",
+      "args": ["/c", "pnpm.cmd", "--filter", "@workspace/api-server", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      }
+    },
+    {
+      "label": "Start Frontend",
+      "type": "shell",
+      "command": "cmd",
+      "args": ["/c", "pnpm.cmd", "--filter", "@workspace/homies-erp", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      }
+    },
+    {
+      "label": "Start Full Stack",
+      "dependsOn": ["Start Backend", "Start Frontend"],
+      "dependsOrder": "parallel"
+    }
+  ]
+}

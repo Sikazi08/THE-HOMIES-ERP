@@ -1,6 +1,5 @@
-import { defineConfig } from "drizzle-kit";
 import fs from "node:fs";
-import path from "path";
+import path from "node:path";
 
 function parseEnvLine(line: string): [string, string] | null {
   const trimmed = line.trim();
@@ -46,17 +45,3 @@ if (envFile) {
     process.env[key] ??= value;
   }
 }
-
-const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL or SUPABASE_DATABASE_URL, ensure the database is provisioned");
-}
-
-export default defineConfig({
-  schema: path.join(__dirname, "./src/schema/index.ts"),
-  dialect: "postgresql",
-  dbCredentials: {
-    url: databaseUrl,
-  },
-});

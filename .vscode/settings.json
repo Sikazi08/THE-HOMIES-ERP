@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; Set-Location 'c:\\\\Users\\\\SUPRA STORES\\\\Downloads\\\\THE-HOMIES-ERPzip \\(1\\)\\\\THE-HOMIES-ERPzip'; git status --short --branch; git remote -v$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "pnpm": true
+    }
+}
