@@ -11,6 +11,8 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
+app.set("etag", false);
+
 app.use(
   pinoHttp({
     logger,
@@ -24,6 +26,11 @@ app.use(
     },
   }),
 );
+
+app.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());

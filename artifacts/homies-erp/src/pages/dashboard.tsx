@@ -8,9 +8,25 @@ import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { isAdmin } = useAuth();
-  const { data: stats, isLoading } = useGetDashboardStats({
+  const { data: stats, isLoading, isError } = useGetDashboardStats({
     query: { queryKey: getGetDashboardStatsQueryKey() }
   });
+
+  if (isError) {
+    return (
+      <Card className="border-destructive/50 bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Tableau de bord indisponible
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Impossible de charger les statistiques. Vérifiez que l'API est lancée et que la base Supabase est synchronisée.
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading || !stats) {
     return (

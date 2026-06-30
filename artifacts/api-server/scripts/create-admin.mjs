@@ -3,8 +3,6 @@ import fs from "node:fs";
 import path from "node:path";
 import pg from "pg";
 
-const { Pool } = pg;
-
 function parseEnvLine(line) {
   const trimmed = line.trim();
   if (!trimmed || trimmed.startsWith("#")) return null;
@@ -50,18 +48,17 @@ if (envFile) {
   }
 }
 
-const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
-
-if (!connectionString) {
+if (!process.env.SUPABASE_DATABASE_URL && !process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL or SUPABASE_DATABASE_URL must be set.");
 }
 
 const username = process.env.ADMIN_USER || "admin";
 const password = process.env.ADMIN_PASS || "admin123";
 const fullName = process.env.ADMIN_NAME || "Administrateur";
+const { Pool } = pg;
 
 const pool = new Pool({
-  connectionString,
+  connectionString: process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL,
   ssl: process.env.SUPABASE_DATABASE_URL ? { rejectUnauthorized: false } : undefined,
 });
 

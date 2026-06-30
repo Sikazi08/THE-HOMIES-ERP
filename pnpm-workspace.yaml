@@ -159,3 +159,5 @@ overrides:
   markdown-it: ">=14.2.0"
   "@babel/core": "^7.29.6"
   uuid: ">=11.1.1"
+
+ignoreScripts: false

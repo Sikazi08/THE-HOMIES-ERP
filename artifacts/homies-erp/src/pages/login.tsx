@@ -31,12 +31,10 @@ export default function Login() {
     loginMutation.mutate(
       { data: { username: username.trim(), password } },
       {
-        onSuccess: () => {
-          queryClient
-            .refetchQueries({ queryKey: getGetMeQueryKey() })
-            .then(() => {
-              setLocation("/");
-            });
+        onSuccess: (data) => {
+          queryClient.setQueryData(getGetMeQueryKey(), data.user);
+          queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+          setLocation("/");
         },
         onError: (e: unknown) => {
           const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;

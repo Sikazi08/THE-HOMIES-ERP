@@ -1,8 +1,10 @@
-import { defineConfig } from "drizzle-kit";
 import fs from "node:fs";
 import path from "node:path";
+import pg from "pg";
 
-function parseEnvLine(line: string): [string, string] | null {
+const { Pool } = pg;
+
+function parseEnvLine(line) {
   const trimmed = line.trim();
   if (!trimmed || trimmed.startsWith("#")) return null;
 
@@ -22,7 +24,7 @@ function parseEnvLine(line: string): [string, string] | null {
   return [key, value];
 }
 
-function findEnvFile(startDir: string): string | null {
+function findEnvFile(startDir) {
   let current = startDir;
 
   while (true) {
@@ -36,7 +38,6 @@ function findEnvFile(startDir: string): string | null {
 }
 
 const envFile = findEnvFile(process.cwd());
-
 if (envFile) {
   const content = fs.readFileSync(envFile, "utf8");
   for (const line of content.split(/\r?\n/)) {
@@ -47,16 +48,24 @@ if (envFile) {
   }
 }
 
-const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+if (!connectionString) throw new Error("DATABASE_URL or SUPABASE_DATABASE_URL must be set.");
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL or SUPABASE_DATABASE_URL, ensure the database is provisioned");
-}
-
-export default defineConfig({
-  schema: "./src/schema/*.ts",
-  dialect: "postgresql",
-  dbCredentials: {
-    url: databaseUrl,
-  },
+const pool = new Pool({
+  connectionString,
+  ssl: { rejectUnauthorized: false },
 });
+
+try {
+  const columns = await pool.query(`
+    select table_name, column_name, data_type
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name in ('products', 'sales', 'expenses', 'clients', 'users')
+    order by table_name, ordinal_position
+  `);
+
+  console.table(columns.rows);
+} finally {
+  await pool.end();
+}
