@@ -14,7 +14,7 @@
     "dev:stop": "node ./scripts/stop-dev.mjs",
     "dev:restart": "pnpm run dev:stop && pnpm run dev",
     "start": "node --enable-source-maps ./server.mjs",
-    "hostinger:build": "corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile && pnpm run build",
+    "hostinger:build": "corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile --prod=false && pnpm run build",
     "hostinger:start": "pnpm run start",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",

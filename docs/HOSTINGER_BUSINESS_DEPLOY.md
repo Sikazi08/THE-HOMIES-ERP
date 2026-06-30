@@ -17,7 +17,7 @@ Dans hPanel, ouvrez le site, puis la section Node.js / Git deployment.
 - Build command:
 
 ```bash
-corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile && pnpm run build
+corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile --prod=false && pnpm run build
 ```
 
 - Start command:
@@ -44,6 +44,8 @@ DATABASE_URL=postgresql://postgres.PROJECT_REF:VOTRE_MOT_DE_PASSE@aws-1-eu-centr
 ```
 
 Ne mettez pas de guillemets autour des valeurs dans le panel Hostinger. Ne mettez pas `API_PROXY_TARGET` en production. Ne mettez pas `SESSION_STORE=postgres` pour ce deploiement simple.
+
+Le `--prod=false` est important: meme avec `NODE_ENV=production`, Hostinger doit installer les dependances de build comme Vite, TypeScript et esbuild avant de compiler l'application.
 
 ## Controle apres deploiement
 
