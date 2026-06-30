@@ -3,9 +3,12 @@ services:
     runtime: node
     name: the-homies-erp
     region: frankfurt
+    plan: starter
     buildCommand: corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile --prod=false && pnpm run build
+    preDeployCommand: pnpm run render:init-db
     startCommand: pnpm run start
     healthCheckPath: /api/healthz
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_VERSION
         value: 24.17.0
@@ -17,5 +20,14 @@ services:
         value: memory
       - key: SESSION_SECRET
         generateValue: true
-      - key: SUPABASE_DATABASE_URL
-        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: the-homies-erp-db
+          property: connectionString
+
+databases:
+  - name: the-homies-erp-db
+    region: frankfurt
+    plan: basic-256mb
+    databaseName: homies_erp
+    user: homies_erp

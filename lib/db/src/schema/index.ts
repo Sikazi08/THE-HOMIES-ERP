@@ -6,3 +6,5 @@ export * from "./partners";
 export * from "./expenses";
 export * from "./movements";
 export * from "./sellers";
+export * from "./attachments";
+export * from "./sessions";

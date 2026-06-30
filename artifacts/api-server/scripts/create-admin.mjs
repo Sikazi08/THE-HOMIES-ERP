@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import pg from "pg";
@@ -53,7 +54,8 @@ if (!process.env.SUPABASE_DATABASE_URL && !process.env.DATABASE_URL) {
 }
 
 const username = process.env.ADMIN_USER || "admin";
-const password = process.env.ADMIN_PASS || "admin123";
+const generatedPassword = !process.env.ADMIN_PASS && process.env.NODE_ENV === "production";
+const password = process.env.ADMIN_PASS || (generatedPassword ? crypto.randomBytes(18).toString("base64url") : "admin123");
 const fullName = process.env.ADMIN_NAME || "Administrateur";
 const { Pool } = pg;
 
@@ -79,6 +81,9 @@ try {
 
   console.log(`Admin user created: ${username}`);
   console.log(`Password: ${password}`);
+  if (generatedPassword) {
+    console.log("This password was generated for the first production deploy. Change it after first login.");
+  }
 } finally {
   await pool.end();
 }
