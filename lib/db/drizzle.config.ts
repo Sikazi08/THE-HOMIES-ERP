@@ -47,11 +47,40 @@ if (envFile) {
   }
 }
 
-const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL or SUPABASE_DATABASE_URL, ensure the database is provisioned");
+function isPlaceholderDatabaseUrl(value: string): boolean {
+  const normalized = value.toLowerCase();
+  return (
+    normalized.includes("...") ||
+    normalized.includes("your_password") ||
+    normalized.includes("your_project_ref") ||
+    normalized.includes("ton_mot_de_passe") ||
+    normalized.includes("ton-url-supabase") ||
+    normalized.includes("example.com")
+  );
 }
+
+function getDatabaseUrl(): string {
+  const candidates = [
+    ["SUPABASE_DATABASE_URL", process.env.SUPABASE_DATABASE_URL],
+    ["DATABASE_URL", process.env.DATABASE_URL],
+  ] as const;
+
+  const configured = candidates.filter(([, value]) => value?.trim());
+  const valid = configured.find(([, value]) => value && !isPlaceholderDatabaseUrl(value));
+
+  if (valid?.[1]) return valid[1];
+
+  if (configured.length > 0) {
+    throw new Error(
+      `Database URL is still a placeholder in ${configured.map(([key]) => key).join(", ")}. ` +
+      "Replace it with the real Supabase Postgres connection string.",
+    );
+  }
+
+  throw new Error("DATABASE_URL or SUPABASE_DATABASE_URL must be set.");
+}
+
+const databaseUrl = getDatabaseUrl();
 
 export default defineConfig({
   schema: "./src/schema/*.ts",
