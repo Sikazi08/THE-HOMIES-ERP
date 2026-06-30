@@ -16,6 +16,14 @@ const app: Express = express();
 app.set("etag", false);
 app.set("trust proxy", 1);
 
+const usePostgresSessionStore =
+  process.env.SESSION_STORE === "postgres" ||
+  (process.env.NODE_ENV !== "production" && process.env.SESSION_STORE !== "memory");
+
+const sessionStore = usePostgresSessionStore
+  ? new PgSession({ pool, createTableIfMissing: true })
+  : undefined;
+
 app.use(
   pinoHttp({
     logger,
@@ -41,7 +49,8 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
-    store: new PgSession({ pool, createTableIfMissing: true }),
+    ...(sessionStore ? { store: sessionStore } : {}),
+    name: "homies.sid",
     secret: process.env.SESSION_SECRET || "homies-erp-secret-key-change-in-prod",
     resave: false,
     saveUninitialized: false,
