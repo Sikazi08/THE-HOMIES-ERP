@@ -12,11 +12,15 @@ if (!connectionString) {
   );
 }
 
-const isSupabase = !!process.env.SUPABASE_DATABASE_URL;
+const needsSsl =
+  !!process.env.SUPABASE_DATABASE_URL ||
+  connectionString.includes("supabase.co") ||
+  connectionString.includes("supabase.com") ||
+  connectionString.includes("sslmode=require");
 
 export const pool = new Pool({
   connectionString,
-  ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
+  ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
 });
 export const db = drizzle(pool, { schema });
 

@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -24,14 +25,23 @@ router.post("/login", async (req, res): Promise<void> => {
   }
   req.session!.userId = user.id;
   req.session!.role = user.role;
-  res.json({
-    user: {
-      id: user.id,
-      username: user.username,
-      fullName: user.fullName,
-      role: user.role,
-      createdAt: user.createdAt,
-    },
+
+  req.session!.save((err) => {
+    if (err) {
+      logger.error({ err, userId: user.id }, "Failed to save login session");
+      res.status(500).json({ error: "Impossible d'enregistrer la session. Veuillez réessayer." });
+      return;
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        createdAt: user.createdAt,
+      },
+    });
   });
 });
 
