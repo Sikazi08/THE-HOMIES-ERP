@@ -1,0 +1,21 @@
+services:
+  - type: web
+    runtime: node
+    name: the-homies-erp
+    region: frankfurt
+    buildCommand: corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile --prod=false && pnpm run build
+    startCommand: pnpm run start
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 24.17.0
+      - key: NODE_ENV
+        value: production
+      - key: BASE_PATH
+        value: /
+      - key: SESSION_STORE
+        value: memory
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SUPABASE_DATABASE_URL
+        sync: false
