@@ -12,7 +12,7 @@ Cette application peut maintenant se deployer entierement sur Render avec un Blu
 
 Option directe: ouvrez ce lien Render et suivez l'assistant:
 
-https://render.com/deploy?repo=https://github.com/Sikazi08/MY-ERP
+https://render.com/deploy?repo=https://github.com/Sikazi08/THE-HOMIES-ERP
 
 Option manuelle:
 
