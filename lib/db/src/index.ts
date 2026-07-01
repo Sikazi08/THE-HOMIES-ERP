@@ -47,6 +47,11 @@ const needsSsl =
   connectionString.includes("supabase.com") ||
   connectionString.includes("sslmode=require");
 
+export const databaseInfo = {
+  provider: source === "SUPABASE_DATABASE_URL" || connectionString.includes("supabase") ? "supabase" : "postgres",
+  source,
+} as const;
+
 export const pool = new Pool({
   connectionString,
   ssl: needsSsl ? { rejectUnauthorized: false } : undefined,

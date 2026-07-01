@@ -3,8 +3,8 @@
 Cette application peut maintenant se deployer entierement sur Render avec un Blueprint:
 
 - un Web Service Node.js pour l'API Express et le frontend React/Vite;
-- une base Render Postgres creee automatiquement;
-- `DATABASE_URL` injectee automatiquement depuis la base Render;
+- une base Supabase Postgres fournie via variable d'environnement Render;
+- `SUPABASE_DATABASE_URL` configuree dans Render, sans l'ecrire dans Git;
 - le schema de base de donnees pousse avant le demarrage;
 - un utilisateur admin cree automatiquement au premier deploy.
 
@@ -19,8 +19,9 @@ Option manuelle:
 1. Poussez le depot sur GitHub ou GitLab.
 2. Dans Render, cliquez sur **New > Blueprint**.
 3. Selectionnez ce depot.
-4. Render detecte `render.yaml`; cliquez sur **Apply**.
-5. Attendez la fin du premier deploy.
+4. Render detecte `render.yaml`.
+5. Ajoutez la variable secrete `SUPABASE_DATABASE_URL` avec l'URL Postgres Supabase.
+6. Cliquez sur **Apply** et attendez la fin du premier deploy.
 
 Le premier deploy lance `pnpm run render:init-db`, qui execute:
 
@@ -43,16 +44,14 @@ Connectez-vous avec `admin` et ce mot de passe, puis changez-le depuis l'interfa
 - Web Service: `the-homies-erp`
 - Region: `frankfurt`
 - Plan web: `starter`
-- Base Postgres: `the-homies-erp-db`
-- Plan Postgres: `basic-256mb`
 - Build Command: `corepack enable && corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile --prod=false && pnpm run build`
 - Pre-Deploy Command: `pnpm run render:init-db`
 - Start Command: `pnpm run start`
 - Health Check Path: `/api/healthz`
 
-## Variables automatiques
+## Variables Render
 
-Render configure ces variables depuis `render.yaml`:
+Render configure les valeurs non secretes depuis `render.yaml`. La valeur de `SUPABASE_DATABASE_URL` doit etre ajoutee dans le Dashboard Render:
 
 ```env
 NODE_VERSION=24.17.0
@@ -60,10 +59,24 @@ NODE_ENV=production
 BASE_PATH=/
 SESSION_STORE=memory
 SESSION_SECRET=<genere par Render>
-DATABASE_URL=<URL interne Render Postgres>
+SUPABASE_DATABASE_URL=<URL Postgres Supabase>
 ```
 
-Ne mettez pas `PORT`: Render le fournit automatiquement. Ne mettez pas `API_PROXY_TARGET` en production.
+Ne mettez pas `PORT`: Render le fournit automatiquement. Ne mettez pas `API_PROXY_TARGET` en production. Ne remplacez pas `SUPABASE_DATABASE_URL` par une base Render Postgres si vous voulez garder les utilisateurs et donnees Supabase.
+
+Pour verifier la base utilisee apres deploy:
+
+```text
+https://my-erp-a5ub.onrender.com/api/healthz/db
+```
+
+La reponse doit contenir:
+
+```json
+{"database":{"provider":"supabase","source":"SUPABASE_DATABASE_URL"}}
+```
+
+Sur un Blueprint Render deja existant, ajoutez `SUPABASE_DATABASE_URL` manuellement dans **Environment**. Render ne redemande pas les variables `sync: false` quand on met a jour un Blueprint existant.
 
 ## Choisir le mot de passe admin
 
@@ -84,7 +97,7 @@ Si l'utilisateur existe deja, `create-admin` ne le modifie pas.
 
 ## Mode gratuit
 
-Le Blueprint utilise des plans payants minimaux pour eviter de perdre la base de donnees. Pour un simple test, vous pouvez remplacer:
+Le Blueprint utilise un plan web payant minimal. Pour un simple test, vous pouvez remplacer:
 
 ```yaml
 plan: starter
@@ -95,17 +108,3 @@ par:
 ```yaml
 plan: free
 ```
-
-et remplacer le plan Postgres:
-
-```yaml
-plan: basic-256mb
-```
-
-par:
-
-```yaml
-plan: free
-```
-
-Attention: les bases Postgres gratuites Render expirent apres 30 jours et ne doivent pas etre utilisees pour la production.
