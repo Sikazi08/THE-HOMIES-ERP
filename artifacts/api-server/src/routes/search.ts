@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, productsTable, salesTable, clientsTable, partnersTable } from "@workspace/db";
-import { ilike, or, eq } from "drizzle-orm";
+import { ilike, or, eq, and, ne } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
@@ -26,12 +26,15 @@ router.get("/", requireAuth, async (req, res): Promise<void> => {
       status: productsTable.status,
       sellingPrice: productsTable.sellingPrice,
     }).from(productsTable).where(
-      or(
-        ilike(productsTable.imei, term),
-        ilike(productsTable.product, term),
-        ilike(productsTable.brand, term),
-        ilike(productsTable.productId, term),
-        ilike(productsTable.supplier, term),
+      and(
+        ne(productsTable.quantity, 0),
+        or(
+          ilike(productsTable.imei, term),
+          ilike(productsTable.product, term),
+          ilike(productsTable.brand, term),
+          ilike(productsTable.productId, term),
+          ilike(productsTable.supplier, term),
+        )
       )
     ).limit(10),
 

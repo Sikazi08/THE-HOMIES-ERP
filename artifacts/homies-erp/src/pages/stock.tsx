@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import {
-  useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct,
-  getListProductsQueryKey,
+  useListProducts, useCreateProduct, useUpdateProduct,
+  getListProductsQueryKey, getListMovementsQueryKey,
 } from "@workspace/api-client-react";
 import type { Product, ProductInput } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -306,7 +306,6 @@ export default function Stock() {
 
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
-  const deleteMutation = useDeleteProduct();
 
   const defaultPhoneValues = { product: "", brand: "", status: "en_stock" as const, entryDate: format(new Date(), "yyyy-MM-dd"), productType: "téléphone", quantity: 1, entryMethod: "achat", phoneState: "OPEN BOX" };
   const defaultAccValues = { product: "", brand: "", status: "en_stock" as const, entryDate: format(new Date(), "yyyy-MM-dd"), productType: "accessoire", quantity: 1, entryMethod: undefined, phoneState: undefined };
@@ -355,6 +354,29 @@ export default function Stock() {
     } finally {
       setImportLoading(false);
     }
+  };
+
+  const handleDeleteProduct = async (product: Product) => {
+    const reason = prompt("Motif de suppression du produit ?");
+    if (!reason?.trim()) {
+      toast.error("Le motif est obligatoire");
+      return;
+    }
+    const res = await fetch(`/api/products/${product.id}`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason.trim() }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || "Erreur lors de la suppression");
+      return;
+    }
+    toast.success("Produit supprime du stock");
+    setSelectedProduct(null);
+    queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListMovementsQueryKey() });
   };
 
   const onEditSubmit = (data: ProductFormData) => {
@@ -693,18 +715,9 @@ export default function Stock() {
                     <Button variant="outline" className="flex-1" onClick={() => openEdit(selectedProduct)}>
                       <Edit2 className="h-4 w-4 mr-2" /> Modifier
                     </Button>
-                    {isAdmin && (
-                      <Button variant="destructive" className="flex-1" onClick={() => {
-                        if (confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) {
-                          deleteMutation.mutate({ id: selectedProduct.id }, {
-                            onSuccess: () => { toast.success("Produit supprimé"); setSelectedProduct(null); queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }); },
-                            onError: (e: unknown) => { const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error; toast.error(msg || "Erreur lors de la suppression"); },
-                          });
-                        }
-                      }}>
-                        <Trash2 className="h-4 w-4 mr-2" /> Supprimer
-                      </Button>
-                    )}
+                    <Button variant="destructive" className="flex-1" onClick={() => void handleDeleteProduct(selectedProduct)}>
+                      <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+                    </Button>
                   </div>
                 )}
               </div>

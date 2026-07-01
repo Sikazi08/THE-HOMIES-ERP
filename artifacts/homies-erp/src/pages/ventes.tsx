@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Plus, Search, Download, Ban, Upload, FileText, ChevronLeft, ChevronRight, Smartphone, Package, Eye, Printer, Paperclip, Pencil } from "lucide-react";
+import { Loader2, Plus, Search, Download, Ban, Upload, FileText, ChevronLeft, ChevronRight, Smartphone, Package, Eye, Printer, Paperclip, Pencil, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { ProductSearchCombobox } from "@/components/product-combobox";
@@ -57,8 +57,135 @@ function useClientAutocomplete() {
   return { suggestions, loading, search, clear: () => setSuggestions([]) };
 }
 
+interface SaleAttachment { id: number; type: string; filename: string; mime_type: string; created_at: string; }
+
+function getSaleAttachmentProductId(sale: any): number | null {
+  if (!sale) return null;
+  if (sale.saleType === "troc" && sale.trocProductId) return Number(sale.trocProductId);
+  if (sale.productId) return Number(sale.productId);
+  if (sale.product?.id) return Number(sale.product.id);
+  return null;
+}
+
+function SaleAttachmentsSection({ sale }: { sale: any }) {
+  const productId = getSaleAttachmentProductId(sale);
+  const [attachments, setAttachments] = useState<SaleAttachment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadType, setUploadType] = useState<"facture" | "declaration" | "cni">("facture");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const load = useCallback(async () => {
+    if (!productId) { setAttachments([]); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/attachments/products/${productId}`, { credentials: "include" });
+      setAttachments(res.ok ? await res.json() : []);
+    } finally {
+      setLoading(false);
+    }
+  }, [productId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const handleUpload = async (file: File) => {
+    if (!productId) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("type", uploadType);
+      const res = await fetch(`/api/attachments/products/${productId}`, { method: "POST", credentials: "include", body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || "Erreur upload");
+        return;
+      }
+      toast.success("Piece jointe ajoutee");
+      await load();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Supprimer cette piece jointe ?")) return;
+    const res = await fetch(`/api/attachments/${id}`, { method: "DELETE", credentials: "include" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || "Erreur lors de la suppression");
+      return;
+    }
+    toast.success("Piece jointe supprimee");
+    await load();
+  };
+
+  if (!productId) return null;
+
+  const typeLabel: Record<string, string> = {
+    facture: "Facture",
+    declaration: "Declaration sur l'honneur",
+    cni: "CNI",
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+          <Paperclip className="h-4 w-4" /> Pieces jointes
+        </h4>
+        <div className="flex items-center gap-2">
+          <Select value={uploadType} onValueChange={(v: any) => setUploadType(v)}>
+            <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="facture">Facture</SelectItem>
+              <SelectItem value="declaration">Declaration</SelectItem>
+              <SelectItem value="cni">CNI</SelectItem>
+            </SelectContent>
+          </Select>
+          <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) void handleUpload(f); e.target.value = ""; }} />
+          <Button variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Upload className="h-4 w-4 mr-2" />Ajouter</>}
+          </Button>
+        </div>
+      </div>
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Chargement...</div>
+      ) : attachments.length === 0 ? (
+        <p className="text-xs text-muted-foreground bg-muted/30 border border-border rounded-lg p-3">Aucune piece jointe.</p>
+      ) : (
+        <div className="space-y-2">
+          {attachments.map((a) => (
+            <div key={a.id} className="flex items-center justify-between gap-2 bg-muted/30 rounded-lg p-3 border border-border">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="h-4 w-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{typeLabel[a.type] || a.type}</p>
+                  <p className="text-xs text-muted-foreground truncate">{a.filename}</p>
+                </div>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <Button variant="outline" size="sm" title="Visualiser" onClick={() => window.open(`/api/attachments/${a.id}/download?inline=1`, "_blank")}>
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" title="Telecharger" onClick={() => window.open(`/api/attachments/${a.id}/download`, "_blank")}>
+                  <Download className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" title="Supprimer" className="text-destructive hover:text-destructive" onClick={() => void handleDelete(a.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Ventes() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSecretary } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("tous");
@@ -69,7 +196,8 @@ export default function Ventes() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [trocHasInvoice, setTrocHasInvoice] = useState(false);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
-  const [declFile, setDeclFile] = useState<File | null>(null);
+  const [declFiles, setDeclFiles] = useState<File[]>([]);
+  const declFile = declFiles[0] ?? null;
   const [cniFile, setCniFile] = useState<File | null>(null);
   const invoiceInputRef = useRef<HTMLInputElement>(null);
   const declInputRef = useRef<HTMLInputElement>(null);
@@ -77,8 +205,6 @@ export default function Ventes() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
-  const [trocAttachments, setTrocAttachments] = useState<any[]>([]);
-  const [loadingAttachments, setLoadingAttachments] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editClientName, setEditClientName] = useState("");
   const [editClientPhone, setEditClientPhone] = useState("");
@@ -88,20 +214,6 @@ export default function Ventes() {
   const [editSaleDate, setEditSaleDate] = useState("");
   const [editSaleTime, setEditSaleTime] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
-
-  useEffect(() => {
-    const s = selectedSale as any;
-    if (s && s.saleType === "troc" && s.trocProductId) {
-      setLoadingAttachments(true);
-      fetch(`/api/attachments/products/${s.trocProductId}`, { credentials: "include" })
-        .then(r => (r.ok ? r.json() : []))
-        .then((rows) => setTrocAttachments(Array.isArray(rows) ? rows : []))
-        .catch(() => setTrocAttachments([]))
-        .finally(() => setLoadingAttachments(false));
-    } else {
-      setTrocAttachments([]);
-    }
-  }, [selectedSale]);
 
   // Client autocomplete
   const nameAutocomplete = useClientAutocomplete();
@@ -168,7 +280,7 @@ export default function Ventes() {
     form.reset({ saleType: "normal", paymentMode: "Cash", amount: 0, clientName: "", clientPhone: "", saleDate: getLocalDateInputValue() });
     setTrocHasInvoice(false);
     setInvoiceFile(null);
-    setDeclFile(null);
+    setDeclFiles([]);
     setCniFile(null);
     nameAutocomplete.clear();
     phoneAutocomplete.clear();
@@ -195,7 +307,7 @@ export default function Ventes() {
         if (data.saleType === "troc" && saleData?.trocProductId) {
           const uploads: Promise<void>[] = [];
           if (trocHasInvoice && invoiceFile) uploads.push(uploadAttachment(saleData.trocProductId, invoiceFile, "facture"));
-          if (!trocHasInvoice && declFile) uploads.push(uploadAttachment(saleData.trocProductId, declFile, "declaration"));
+          if (!trocHasInvoice) declFiles.forEach((file) => uploads.push(uploadAttachment(saleData.trocProductId, file, "declaration")));
           if (!trocHasInvoice && cniFile) uploads.push(uploadAttachment(saleData.trocProductId, cniFile, "cni"));
           if (uploads.length) await Promise.all(uploads);
         }
@@ -279,6 +391,30 @@ export default function Ventes() {
         },
       });
     }
+  };
+
+  const handleDeleteSale = async (id: number) => {
+    const reason = prompt("Motif de suppression de la vente ?");
+    if (!reason?.trim()) {
+      toast.error("Le motif est obligatoire");
+      return;
+    }
+    const res = await fetch(`/api/sales/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason.trim() }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || "Erreur lors de la suppression");
+      return;
+    }
+    toast.success("Vente supprimee");
+    setSelectedSale(null);
+    queryClient.invalidateQueries({ queryKey: getListSalesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListMovementsQueryKey() });
   };
 
   return (
@@ -531,12 +667,19 @@ export default function Ventes() {
                             <p className="text-xs text-muted-foreground">Documents alternatifs (facultatif) :</p>
                             <div className="flex flex-col gap-2">
                               <div className="flex items-center gap-2">
-                                <input ref={declInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
-                                  onChange={e => { const f = e.target.files?.[0]; if (f) { setDeclFile(f); toast.success(`Déclaration sélectionnée : ${f.name}`); } }} />
+                                <input ref={declInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" multiple className="hidden"
+                                  onChange={e => {
+                                    const files = Array.from(e.target.files ?? []).slice(0, 2);
+                                    if (files.length) {
+                                      setDeclFiles(files);
+                                      toast.success(`${files.length} déclaration${files.length > 1 ? "s" : ""} sélectionnée${files.length > 1 ? "s" : ""}`);
+                                    }
+                                  }} />
                                 <Button type="button" variant="outline" size="sm" onClick={() => declInputRef.current?.click()}>
                                   <Upload className="h-4 w-4 mr-1" /> Déclaration sur l'honneur
                                 </Button>
                                 {declFile && <span className="text-xs text-green-400 truncate max-w-[120px]"><FileText className="h-3 w-3 inline mr-0.5" />{declFile.name}</span>}
+                                {declFiles.length > 1 && <span className="text-xs text-green-400">+{declFiles.length - 1} fichier</span>}
                               </div>
                               <div className="flex items-center gap-2">
                                 <input ref={cniInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
@@ -785,43 +928,7 @@ export default function Ventes() {
                   </div>
                 )}
 
-                {s.saleType === "troc" && (
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Pièces jointes</h4>
-                    {loadingAttachments ? (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Chargement...</div>
-                    ) : trocAttachments.length === 0 ? (
-                      <p className="text-xs text-muted-foreground bg-muted/30 border border-border rounded-lg p-3">Aucune pièce jointe pour ce troc.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {trocAttachments.map((a: any) => {
-                          const typeLabel: Record<string, string> = { facture: "Facture", declaration: "Déclaration sur l'honneur", cni: "CNI" };
-                          return (
-                            <div key={a.id} className="flex items-center justify-between gap-2 bg-muted/30 rounded-lg p-3 border border-border">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <FileText className="h-4 w-4 text-primary shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium">{typeLabel[a.type] || a.type}</p>
-                                  <p className="text-xs text-muted-foreground truncate">{a.filename}</p>
-                                </div>
-                              </div>
-                              <div className="flex gap-1 shrink-0">
-                                <Button variant="outline" size="sm" title="Visualiser"
-                                  onClick={() => window.open(`/api/attachments/${a.id}/download?inline=1`, "_blank")}>
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="sm" title="Télécharger"
-                                  onClick={() => window.open(`/api/attachments/${a.id}/download`, "_blank")}>
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <SaleAttachmentsSection sale={s} />
 
                 <div className="pt-4 border-t border-border space-y-3">
                   {!s.cancelled && (
@@ -833,6 +940,11 @@ export default function Ventes() {
                     onClick={() => window.open(`/api/sales/${s.id}/invoice`, "_blank")}>
                     <Printer className="h-4 w-4 mr-2" /> Voir & Télécharger la facture
                   </Button>
+                  {(isAdmin || isSecretary) && (
+                    <Button className="w-full" variant="destructive" onClick={() => void handleDeleteSale(s.id)}>
+                      <Trash2 className="h-4 w-4 mr-2" /> Supprimer la vente
+                    </Button>
+                  )}
                 </div>
               </div>
             );

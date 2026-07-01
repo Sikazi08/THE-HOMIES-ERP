@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, productsTable, salesTable, expensesTable, clientsTable } from "@workspace/db";
-import { eq, sql, and, gte, lte } from "drizzle-orm";
+import { eq, sql, and, gte, lte, ne } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 
 const router = Router();
@@ -20,7 +20,7 @@ router.get("/dashboard", requireAuth, async (req, res): Promise<void> => {
     acc_in_stock: sql<number>`count(*) filter (where ${productsTable.status} = 'en_stock' and ${productsTable.productType} = 'accessoire')::int`,
     acc_at_partner: sql<number>`count(*) filter (where ${productsTable.status} = 'chez_partenaire' and ${productsTable.productType} = 'accessoire')::int`,
     acc_sold: sql<number>`count(*) filter (where ${productsTable.status} = 'vendu' and ${productsTable.productType} = 'accessoire')::int`,
-  }).from(productsTable);
+  }).from(productsTable).where(ne(productsTable.quantity, 0));
 
   const todaySales = await db.select().from(salesTable).where(
     and(eq(salesTable.saleDate, today), eq(salesTable.cancelled, false))
@@ -39,7 +39,7 @@ router.get("/dashboard", requireAuth, async (req, res): Promise<void> => {
 
   // Low stock: only accessories with quantity <= 1
   const lowStockAcc = await db.select().from(productsTable)
-    .where(and(eq(productsTable.status, "en_stock"), eq(productsTable.productType, "accessoire"), sql`${productsTable.quantity} <= 1`))
+    .where(and(eq(productsTable.status, "en_stock"), eq(productsTable.productType, "accessoire"), ne(productsTable.quantity, 0), sql`${productsTable.quantity} <= 1`))
     .limit(10);
 
   const result: Record<string, unknown> = {

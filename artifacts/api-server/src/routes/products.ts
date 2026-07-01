@@ -230,18 +230,44 @@ router.patch("/:id", requireAuth, async (req, res): Promise<void> => {
 
 router.delete("/:id", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id));
-  const isAdmin = req.session!.role === "admin";
-  const userId = req.session!.userId!;
+  const role = req.session!.role;
+  const isAdmin = role === "admin";
+  const isSecretary = role === "secretary";
+  const reason = String(req.body?.reason ?? "").trim();
+
+  if (!isAdmin && !isSecretary) {
+    res.status(403).json({ error: "Acces refuse" });
+    return;
+  }
+  if (!reason) {
+    res.status(400).json({ error: "Le motif de suppression est requis" });
+    return;
+  }
 
   const [row] = await db.select().from(productsTable).where(eq(productsTable.id, id)).limit(1);
   if (!row) { res.status(404).json({ error: "Produit non trouvé" }); return; }
 
-  if (!isAdmin && row.createdByUserId !== userId) {
-    res.status(403).json({ error: "Vous ne pouvez supprimer que les produits que vous avez ajoutés" });
+  if (row.status === "vendu") {
+    res.status(400).json({ error: "Un produit vendu doit etre gere depuis sa vente" });
+    return;
+  }
+  if ((row.quantity ?? 0) <= 0) {
+    res.status(400).json({ error: "Ce produit est deja supprime du stock" });
     return;
   }
 
-  await db.delete(productsTable).where(eq(productsTable.id, id));
+  await db.update(productsTable).set({ quantity: 0 }).where(eq(productsTable.id, id));
+  await db.insert(movementsTable).values({
+    movementType: "suppression_produit",
+    movementDate: nowDateStr(),
+    movementTime: nowTimeStr(),
+    userId: req.session!.userId!,
+    productId: row.id,
+    productRef: row.productId,
+    imei: row.imei,
+    description: `Suppression stock: ${row.product}${row.brand ? " " + row.brand : ""} (${row.productId}) - Motif: ${reason}`,
+  });
+
   res.status(204).send();
 });
 

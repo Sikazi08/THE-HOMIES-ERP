@@ -492,6 +492,64 @@ router.post("/:id/cancel", requireAuth, async (req, res): Promise<void> => {
   res.json({ ...updated, amount: Number(updated.amount) });
 });
 
+// DELETE /api/sales/:id - delete a sale with a required reason
+router.delete("/:id", requireAuth, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id));
+  const role = req.session!.role;
+  const isAdmin = role === "admin";
+  const isSecretary = role === "secretary";
+  const reason = String(req.body?.reason ?? "").trim();
+
+  if (!isAdmin && !isSecretary) {
+    res.status(403).json({ error: "Acces refuse" });
+    return;
+  }
+  if (!reason) {
+    res.status(400).json({ error: "Le motif de suppression est requis" });
+    return;
+  }
+
+  const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, id)).limit(1);
+  if (!sale) { res.status(404).json({ error: "Vente non trouvee" }); return; }
+
+  const [product] = await db.select().from(productsTable).where(eq(productsTable.id, sale.productId)).limit(1);
+  let trocProduct: typeof productsTable.$inferSelect | undefined;
+  if (sale.trocProductId) {
+    [trocProduct] = await db.select().from(productsTable).where(eq(productsTable.id, sale.trocProductId)).limit(1);
+    if (trocProduct?.status === "vendu") {
+      res.status(400).json({ error: "Impossible de supprimer cette vente: l'appareil recu en troc a deja ete vendu" });
+      return;
+    }
+  }
+
+  if (!sale.cancelled && product) {
+    if (product.productType === "accessoire") {
+      const restoredQty = (product.quantity ?? 0) + (sale.quantitySold ?? 1);
+      await db.update(productsTable).set({ quantity: restoredQty, status: "en_stock", saleDate: null }).where(eq(productsTable.id, sale.productId));
+    } else {
+      await db.update(productsTable).set({ status: "en_stock", saleDate: null }).where(eq(productsTable.id, sale.productId));
+    }
+  }
+
+  if (trocProduct) {
+    await db.update(productsTable).set({ quantity: 0 }).where(eq(productsTable.id, trocProduct.id));
+  }
+
+  await db.delete(salesTable).where(eq(salesTable.id, id));
+  await db.insert(movementsTable).values({
+    movementType: "annulation",
+    movementDate: nowDateStr(),
+    movementTime: nowTimeStr(),
+    userId: req.session!.userId!,
+    productId: sale.productId,
+    productRef: product?.productId ?? null,
+    imei: product?.imei ?? null,
+    description: `Suppression vente #${id}: ${reason}`,
+  });
+
+  res.status(204).send();
+});
+
 // GET /api/sales/:id/invoice — HTML invoice for printing
 router.get("/:id/invoice", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id));
